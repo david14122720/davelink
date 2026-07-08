@@ -1,0 +1,30 @@
+# Secrets
+.env
+
+# Virtual env
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# SDD & skills (solo dev local)
+openspec/
+.agents/
+.atl/
+skills-lock.json
+
+# Docs y md (no necesarios en producción)
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
