@@ -1,0 +1,28 @@
+# Secrets (contiene credenciales reales)
+.env
+
+# Entorno virtual
+.venv/
+venv/
+
+# Caché de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Artefactos SDD / OpenSpec (solo desarrollo local)
+openspec/
+
+# Skills (solo desarrollo local)
+.agents/
+.atl/
+skills-lock.json
+
+# Excluir todos los .md EXCEPTO README.md
+*.md
+!README.md
+
+# Sistema / editor
+.DS_Store
+.idea/
+.vscode/

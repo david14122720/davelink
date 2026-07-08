@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>daveLinK — Acorta tus enlaces</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🔗 daveLinK</h1>
+            <p class="subtitle">Acorta tus enlaces al instante</p>
+        </header>
+
+        <!-- Main Form -->
+        <main class="main">
+            <form id="shorten-form" class="shorten-form">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="url-input" 
+                        placeholder="Pega tu enlace aquí (ej: https://google.com)" 
+                        required
+                        autocomplete="url"
+                    >
+                    <button type="submit" id="submit-btn">
+                        <span class="btn-text">Acortar</span>
+                        <span class="btn-loading" hidden>⏳</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Result Section -->
+            <div id="result" class="result" hidden>
+                <div class="result-card">
+                    <div class="result-header">
+                        <span class="result-label">Tu enlace acortado</span>
+                    </div>
+                    <div class="result-url">
+                        <input type="text" id="short-url" readonly>
+                        <button id="copy-btn" class="copy-btn" title="Copiar">
+                            📋
+                        </button>
+                    </div>
+                    <div class="result-actions">
+                        <button id="qr-btn" class="action-btn">
+                            📱 Ver QR Code
+                        </button>
+                        <button id="stats-btn" class="action-btn">
+                            📊 Ver Estadísticas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Code Section (after shortening) -->
+            <div id="qr-section" class="qr-section" hidden>
+                <div class="result-card">
+                    <div class="result-header">
+                        <span class="result-label">Código QR de tu enlace</span>
+                        <button id="close-qr" class="close-btn">✕</button>
+                    </div>
+                    <div class="qr-container">
+                        <img id="qr-image" src="" alt="QR Code">
+                    </div>
+                    <div class="qr-info">
+                        <p id="qr-original-url" class="qr-url"></p>
+                    </div>
+                    <div class="result-actions">
+                        <button id="download-qr" class="action-btn">
+                            💾 Descargar QR
+                        </button>
+                        <button id="share-qr" class="action-btn">
+                            📤 Compartir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Generator Section (standalone) -->
+            <div id="qr-generator" class="qr-generator">
+                <div class="section-divider">
+                    <span>o genera un QR directamente</span>
+                </div>
+                <form id="qr-form" class="qr-form">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="qr-url-input" 
+                            placeholder="Pega cualquier enlace para generar QR..." 
+                            required
+                            autocomplete="url"
+                        >
+                        <button type="submit" id="qr-generate-btn">
+                            <span class="btn-text">📱 Generar QR</span>
+                            <span class="btn-loading" hidden>⏳</span>
+                        </button>
+                    </div>
+                </form>
+                <div id="qr-result" class="qr-result" hidden>
+                    <div class="result-card">
+                        <div class="result-header">
+                            <span class="result-label">Tu código QR</span>
+                            <button id="close-qr-result" class="close-btn">✕</button>
+                        </div>
+                        <div class="qr-container">
+                            <img id="qr-result-image" src="" alt="QR Code">
+                        </div>
+                        <div class="qr-info">
+                            <p id="qr-result-url" class="qr-url"></p>
+                        </div>
+                        <div class="result-actions">
+                            <button id="download-qr-result" class="action-btn">
+                                💾 Descargar QR
+                            </button>
+                            <button id="copy-qr-result" class="action-btn">
+                                📋 Copiar enlace
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div id="stats-section" class="stats-section" hidden>
+                <div class="result-card">
+                    <div class="result-header">
+                        <span class="result-label">Estadísticas</span>
+                        <button id="close-stats" class="close-btn">✕</button>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="total-clicks">0</span>
+                            <span class="stat-label">Clics totales</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="created-date">-</span>
+                            <span class="stat-label">Creado</span>
+                        </div>
+                    </div>
+                    <div class="recent-clicks">
+                        <h4>Clics recientes</h4>
+                        <div id="clicks-list" class="clicks-list">
+                            <!-- Clicks will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Hecho con ❤️ por daveLinK</p>
+        </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
