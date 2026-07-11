@@ -49,6 +49,17 @@ async def shorten_url(
     - Stores the link in the database
     - Returns the shortened URL
     """
+    # Check if URL already exists
+    existing = db.query(Link).filter(Link.url_original == str(shorten_req.url)).first()
+    if existing:
+        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.hostname
+        return ShortenResponse(
+            short_url=f"{scheme}://{host}/{existing.codigo}",
+            code=existing.codigo,
+            original_url=str(shorten_req.url),
+        )
+
     # Generate unique code (retry on collision)
     max_retries = 10
     for _ in range(max_retries):

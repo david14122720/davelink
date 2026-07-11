@@ -17,15 +17,59 @@ def test_code_generation_base62(client):
         assert all(c in base62 for c in code), f"Code '{code}' contains non-base62 chars"
 
 
-def test_dedup_creates_different_codes(client):
-    """Verify same URL shortened multiple times returns different codes"""
+def test_deduplication_returns_same_code(client):
+    """Verify same URL shortened multiple times returns the same code (dedup)"""
     url = "https://example.com/dedup-test"
-    codes = set()
-    for _ in range(3):
-        response = client.post("/api/shorten", json={"url": url})
-        assert response.status_code == 200
-        codes.add(response.json()["code"])
-    assert len(codes) == 3, "Each shorten call should generate a unique code"
+    response1 = client.post("/api/shorten", json={"url": url})
+    assert response1.status_code == 200
+    code1 = response1.json()["code"]
+
+    response2 = client.post("/api/shorten", json={"url": url})
+    assert response2.status_code == 200
+    code2 = response2.json()["code"]
+
+    response3 = client.post("/api/shorten", json={"url": url})
+    assert response3.status_code == 200
+    code3 = response3.json()["code"]
+
+    assert code1 == code2 == code3, (
+        f"Same URL should return same code on every call, "
+        f"got {code1}, {code2}, {code3}"
+    )
+
+
+def test_deduplication_no_extra_row(client, db_session):
+    """Verify dedup does not insert a new row for existing URLs"""
+    from backend.shared.models import Link
+
+    url = "https://example.com/dedup-row-check"
+    initial_count = db_session.query(Link).count()
+
+    # First POST — creates a new row
+    resp1 = client.post("/api/shorten", json={"url": url})
+    assert resp1.status_code == 200
+    code1 = resp1.json()["code"]
+    first_row = db_session.query(Link).filter(Link.codigo == code1).first()
+    assert first_row is not None
+
+    count_after_first = db_session.query(Link).count()
+    assert count_after_first == initial_count + 1
+
+    # Second POST — should NOT create a new row
+    resp2 = client.post("/api/shorten", json={"url": url})
+    assert resp2.status_code == 200
+    code2 = resp2.json()["code"]
+    assert code2 == code1
+
+    count_after_second = db_session.query(Link).count()
+    assert count_after_second == count_after_first, (
+        f"Row count increased after second POST with same URL: "
+        f"{count_after_first} -> {count_after_second}"
+    )
+
+    # Let rate limit window expire so subsequent tests aren't throttled
+    import time
+    time.sleep(1.1)
 
 
 def test_shorten_empty_body(client):
