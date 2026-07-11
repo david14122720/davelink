@@ -3,22 +3,18 @@ LinkSnap / Acortador — Stats Route
 GET /api/stats/{code} - Get analytics for a link
 """
 
+import json
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-import sys
-from pathlib import Path
-
-# Add backend directory to path
-backend_dir = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(backend_dir))
-
-from shared.database import get_db
-from shared.models import Link, Analytics
+from backend.fastapi_app.cache import cache_get, cache_set
+from backend.fastapi_app.rate_limit import limiter
+from backend.shared.database import get_db
+from backend.shared.models import Link, Analytics
 
 router = APIRouter()
 
@@ -40,7 +36,8 @@ class StatsResponse(BaseModel):
 
 
 @router.get("/api/stats/{code}", response_model=StatsResponse)
-async def get_stats(code: str, db: Session = Depends(get_db)):
+@limiter.limit("10/second")
+async def get_stats(request: Request, code: str, db: Session = Depends(get_db)):
     """
     Get analytics and statistics for a short URL.
     
@@ -48,6 +45,16 @@ async def get_stats(code: str, db: Session = Depends(get_db)):
     - Returns total click count
     - Returns recent click analytics (last 10)
     """
+    # Try cache first (TTL 30s — short enough for freshness)
+    cached = cache_get(f"davelink:stats:{code}")
+    if cached:
+        try:
+            data = json.loads(cached)
+            return StatsResponse(**data)
+        except (json.JSONDecodeError, TypeError) as exc:
+            print(f"Stats cache parse error for '{code}': {exc}")
+            # Fall through to DB
+
     # Find the link
     link = db.query(Link).filter(Link.codigo == code).first()
     
@@ -65,16 +72,27 @@ async def get_stats(code: str, db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
-    
-    return StatsResponse(
+
+    # Get total clicks by counting analytics entries (more reliable and allows redirect optimization)
+    total_clicks = db.query(Analytics).filter(Analytics.link_id == link.id).count()
+
+    def mask_ip(ip: str) -> str:
+        if not ip:
+            return ""
+        parts = ip.split(".")
+        if len(parts) == 4:
+            return f"{parts[0]}.{parts[1]}.*.*"
+        return ip
+
+    response = StatsResponse(
         code=link.codigo,
         original_url=link.url_original,
         created_at=link.fecha_creacion,
-        total_clicks=link.clicks or 0,
+        total_clicks=total_clicks,
         is_active=link.activo,
         recent_clicks=[
             AnalyticsResponse(
-                ip_address=a.ip_address,
+                ip_address=mask_ip(a.ip_address),
                 user_agent=a.user_agent,
                 referer=a.referer,
                 fecha_click=a.fecha_click,
@@ -82,3 +100,15 @@ async def get_stats(code: str, db: Session = Depends(get_db)):
             for a in recent_analytics
         ],
     )
+
+    # Cache the serialized response
+    try:
+        cache_set(
+            f"davelink:stats:{code}",
+            json.dumps(response.model_dump(mode="json")),
+            ttl=30,
+        )
+    except Exception as exc:
+        print(f"Stats cache set error for '{code}': {exc}")
+
+    return response

@@ -44,9 +44,75 @@ const copyQrResultBtn = document.getElementById('copy-qr-result');
 // State
 let currentCode = null;
 let currentOriginalUrl = null;
+const qrConfig = { fill_color: "#6366f1", dot_style: "square" };
+let debounceTimer;
 
 // API Base URL
 const API_BASE = '';
+
+// Show a visible error near the QR
+function showQrError(target, message) {
+    const container = target === 'section'
+        ? document.querySelector('#qr-section .qr-customization')
+        : document.querySelector('#qr-result .qr-customization');
+    if (!container) return;
+    let errEl = container.querySelector('.qr-error');
+    if (!errEl) {
+        errEl = document.createElement('p');
+        errEl.className = 'qr-error';
+        errEl.style.cssText = 'color:var(--error,#ef4444);font-size:0.8rem;margin:0.5rem 0 0;';
+        container.appendChild(errEl);
+    }
+    errEl.textContent = message;
+    setTimeout(() => { if (errEl.parentNode) errEl.remove(); }, 5000);
+}
+
+// Regenerate QR with current customization
+function regenerateQR(code, target) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/qr/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, config: qrConfig }),
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || `Error ${res.status} regenerando QR`);
+            }
+            const data = await res.json();
+            const base64 = `data:image/png;base64,${data.qr_code}`;
+            if (target === 'section') {
+                qrImage.src = base64;
+            } else if (target === 'result') {
+                qrResultImage.src = base64;
+            }
+        } catch (error) {
+            console.error('QR Regeneration error:', error);
+            showQrError(target, `Error: ${error.message}`);
+        }
+    }, 300);
+}
+
+// Wire QR customization change + input events
+function handleQrConfigChange(el) {
+    const target = el.dataset.qrTarget;
+    const name = el.name;
+    qrConfig[name] = el.value;
+
+    if (target === 'section') {
+        if (currentCode) regenerateQR(currentCode, 'section');
+    } else if (target === 'result') {
+        const resultCode = qrResultImage.dataset.code;
+        if (resultCode) regenerateQR(resultCode, 'result');
+    }
+}
+
+document.querySelectorAll('.qr-customization input, .qr-customization select').forEach(el => {
+    el.addEventListener('change', () => handleQrConfigChange(el));
+    el.addEventListener('input', () => handleQrConfigChange(el));
+});
 
 // Event Listeners
 form.addEventListener('submit', handleSubmit);
@@ -151,8 +217,12 @@ async function handleQrGenerate(e) {
         
         const shortenData = await shortenResponse.json();
         
-        // Then, get the QR code
-        const qrResponse = await fetch(`${API_BASE}/api/qr/${shortenData.code}`);
+        // Then, get the QR code (use POST with current qrConfig for consistent appearance)
+        const qrResponse = await fetch(`${API_BASE}/api/qr/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: shortenData.code, config: qrConfig }),
+        });
         if (!qrResponse.ok) throw new Error('Error al generar QR');
         
         const qrData = await qrResponse.json();
@@ -216,9 +286,13 @@ async function showQrSection() {
     // Show original URL
     qrOriginalUrl.textContent = currentOriginalUrl;
     
-    // Generate QR code via API
+    // Generate QR code via API (use POST with current qrConfig)
     try {
-        const response = await fetch(`${API_BASE}/api/qr/${currentCode}`);
+        const response = await fetch(`${API_BASE}/api/qr/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: currentCode, config: qrConfig }),
+        });
         if (response.ok) {
             const data = await response.json();
             qrImage.src = `data:image/png;base64,${data.qr_code}`;
@@ -360,3 +434,26 @@ qrUrlInput.addEventListener('input', () => {
     const errorEl = document.querySelector('.error-message');
     if (errorEl) errorEl.classList.remove('show');
 });
+
+// ── Cache Status Indicator ────────────────────────────────────────────────
+
+async function updateCacheStatus() {
+    const dot = document.getElementById('cache-dot');
+    const text = document.getElementById('cache-text');
+    if (!dot || !text) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/cache/status`);
+        if (!res.ok) throw new Error('Sin respuesta');
+        const data = await res.json();
+        dot.className = 'cache-dot ' + (data.connected ? 'connected' : 'disconnected');
+        text.textContent = data.message;
+    } catch {
+        dot.className = 'cache-dot disconnected';
+        text.textContent = 'Cache: no disponible';
+    }
+}
+
+// Check cache status on load and every 30s
+updateCacheStatus();
+setInterval(updateCacheStatus, 30000);

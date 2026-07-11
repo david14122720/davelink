@@ -3,18 +3,16 @@ LinkSnap / Acortador — Redirect Route
 GET /{code} - Redirect to original URL
 """
 
+import json
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-import sys
-from pathlib import Path
-
-# Add backend directory to path
-backend_dir = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(backend_dir))
-
-from shared.database import get_db
-from shared.models import Link, Analytics
+from backend.fastapi_app.cache import cache_get, cache_set
+from backend.shared.database import get_db
+from backend.shared.models import Link, Analytics
 
 router = APIRouter()
 
@@ -25,42 +23,68 @@ async def redirect_to_url(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """
-    Redirect to the original URL using the short code.
-    
-    - Looks up the link by code
-    - Records analytics (IP, user agent, referer)
-    - Increments click counter
-    - Returns 302 redirect to original URL
-    """
-    # Find the link
-    link = db.query(Link).filter(Link.codigo == code).first()
-    
-    if not link:
-        raise HTTPException(
-            status_code=404,
-            detail="Enlace no encontrado"
+    start_time = time.perf_counter()
+
+    # Try cache first
+    cached = cache_get(f"davelink:redirect:{code}")
+    if cached:
+        try:
+            data = json.loads(cached)
+            link_id = data["id"]
+            url_original = data["url_original"]
+        except (json.JSONDecodeError, KeyError) as exc:
+            print(f"Redirect cache parse error for '{code}': {exc}")
+            cached = None
+
+    if not cached:
+        # OPTIMIZATION: Fetch only required columns to reduce memory and DB load
+        # Instead of loading the full object, we only get what we need for the redirect
+        link_data = db.query(Link.id, Link.url_original, Link.activo).filter(Link.codigo == code).first()
+
+        if not link_data:
+            raise HTTPException(
+                status_code=404,
+                detail="Enlace no encontrado"
+            )
+
+        if not link_data.activo:
+            raise HTTPException(
+                status_code=410,
+                detail="Este enlace ha sido desactivado"
+            )
+
+        link_id = link_data.id
+        url_original = link_data.url_original
+
+        # Cache only on successful redirect (active, found link)
+        cache_set(
+            f"davelink:redirect:{code}",
+            json.dumps({
+                "id": link_id,
+                "url_original": url_original,
+                "activo": True,
+            }),
+            ttl=3600,
         )
-    
-    if not link.activo:
-        raise HTTPException(
-            status_code=410,
-            detail="Este enlace ha sido desactivado"
-        )
-    
-    # Record analytics (use empty string instead of None — DB columns are NOT NULL)
+
+    # Extract headers once
+    headers = request.headers
+
+    # Record analytics
+    # OPTIMIZATION: Removed the synchronous update to Link.clicks (the row lock)
+    # We now only perform a single INSERT. Total clicks are calculated on-demand in /stats
     analytics = Analytics(
-        link_id=link.id,
+        link_id=link_id,
         ip_address=(request.client.host if request.client else "") or "",
-        user_agent=request.headers.get("user-agent") or "",
-        referer=request.headers.get("referer") or "",
+        user_agent=headers.get("user-agent") or "",
+        referer=headers.get("referer") or "",
     )
     db.add(analytics)
-    
-    # Increment click counter
-    link.clicks = (link.clicks or 0) + 1
     db.commit()
-    
+
+    end_time = time.perf_counter()
+    duration = (end_time - start_time) * 1000
+    print(f"PERF LOG: Redirect for {code} took {duration:.2f}ms")
+
     # Return redirect
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url=link.url_original, status_code=302)
+    return RedirectResponse(url=url_original, status_code=302)

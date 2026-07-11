@@ -6,19 +6,13 @@ POST /api/shorten - Create short URL
 import secrets
 import string
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.orm import Session
 
-import sys
-from pathlib import Path
-
-# Add backend directory to path
-backend_dir = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(backend_dir))
-
-from shared.database import get_db
-from shared.models import Link
+from backend.fastapi_app.rate_limit import limiter
+from backend.shared.database import get_db
+from backend.shared.models import Link
 
 router = APIRouter()
 
@@ -42,7 +36,12 @@ class ShortenResponse(BaseModel):
 
 
 @router.post("/api/shorten", response_model=ShortenResponse)
-async def shorten_url(request: ShortenRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/second")
+async def shorten_url(
+    request: Request,
+    shorten_req: ShortenRequest,
+    db: Session = Depends(get_db),
+):
     """
     Create a short URL from a long URL.
     
@@ -66,18 +65,18 @@ async def shorten_url(request: ShortenRequest, db: Session = Depends(get_db)):
     # Create new link
     new_link = Link(
         codigo=code,
-        url_original=str(request.url),
+        url_original=str(shorten_req.url),
     )
     db.add(new_link)
     db.commit()
     db.refresh(new_link)
     
-    # Build short URL (in production, use your domain)
-    base_url = "http://localhost:8000"
-    short_url = f"{base_url}/{code}"
+    # Build short URL
+    from backend.app_config import BASE_URL
+    short_url = f"{BASE_URL}/{code}"
     
     return ShortenResponse(
         short_url=short_url,
         code=code,
-        original_url=str(request.url),
+        original_url=str(shorten_req.url),
     )

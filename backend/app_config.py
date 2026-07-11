@@ -13,11 +13,23 @@ from dotenv import load_dotenv
 
 # Load .env from project root (docker-compose.yml level) or backend/
 env_path = Path(__file__).resolve().parent.parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
-else:
+
+
+def _safe_load_dotenv(path: Path) -> None:
+    """Load a dotenv file when the runtime can read it."""
+    try:
+        if path.exists():
+            load_dotenv(path)
+    except (PermissionError, OSError):
+        # Sandbox or locked-down deployments may expose the path but deny reads.
+        # The app should continue with environment variables already in place.
+        pass
+
+
+_safe_load_dotenv(env_path)
+if not os.getenv("DATABASE_URL"):
     # Fallback: try backend/.env
-    load_dotenv(Path(__file__).resolve().parent / ".env")
+    _safe_load_dotenv(Path(__file__).resolve().parent / ".env")
 
 
 def get_bool(key: str, default: str = "false") -> bool:
@@ -25,21 +37,22 @@ def get_bool(key: str, default: str = "false") -> bool:
 
 
 # ── Database ───────────────────────────────────────────────────────────────
-DATABASE_URL: str = os.getenv(
-    "DATABASE_URL",
-    "postgresql://acortador:acortador_pass@localhost:5432/acortador",
-)
+DATABASE_URL: str = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # For local development, we can keep a fallback, but in production it MUST be an env var.
+    # We'll check ENVIRONMENT to decide.
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://acortador:acortador_pass@localhost:5432/acortador") if get_bool("DEBUG", "true") else ""
 
 # ── Django ─────────────────────────────────────────────────────────────────
-SECRET_KEY: str = os.getenv(
-    "SECRET_KEY",
-    "django-insecure-change-me-to-a-real-secret-key",
-)
+SECRET_KEY: str = os.getenv("SECRET_KEY", "django-insecure-placeholder-key")
 DEBUG: bool = get_bool("DEBUG", "true")
 
 # ── App ────────────────────────────────────────────────────────────────────
 BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8001")
 ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
+# ── Cache ─────────────────────────────────────────────────────────────────
+DRAGONFLY_URL: str = os.getenv("DRAGONFLY_URL", "")
 
 # ── Derived ────────────────────────────────────────────────────────────────
 # For Django's DATABASES setting, we need a dict, not a string.

@@ -68,6 +68,29 @@
                     <div class="qr-container">
                         <img id="qr-image" src="" alt="QR Code">
                     </div>
+                    <div class="qr-customization" aria-label="Personalización del QR">
+                        <div class="qr-customization-head">
+                            <h4>Personaliza tu QR</h4>
+                            <p>Ajusta el color y la forma en tiempo real.</p>
+                        </div>
+                        <div class="qr-customization-grid">
+                            <label class="qr-option">
+                                <span class="qr-option-label">Color principal</span>
+                                <span class="qr-option-hint">Define el color del patrón</span>
+                                <input type="color" name="fill_color" value="#6366f1" data-qr-target="section">
+                            </label>
+                            <label class="qr-option qr-option--wide">
+                                <span class="qr-option-label">Forma</span>
+                                <span class="qr-option-hint">Elige el estilo visual</span>
+                                <select name="dot_style" data-qr-target="section">
+                                    <option value="square">Cuadrado</option>
+                                    <option value="circle">Círculo</option>
+                                    <option value="rounded">Redondeado</option>
+                                    <option value="gapped">Separado</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
                     <div class="qr-info">
                         <p id="qr-original-url" class="qr-url"></p>
                     </div>
@@ -110,6 +133,29 @@
                         </div>
                         <div class="qr-container">
                             <img id="qr-result-image" src="" alt="QR Code">
+                        </div>
+                        <div class="qr-customization" aria-label="Personalización del QR">
+                            <div class="qr-customization-head">
+                                <h4>Personaliza tu QR</h4>
+                                <p>Ajusta el color y la forma en tiempo real.</p>
+                            </div>
+                            <div class="qr-customization-grid">
+                                <label class="qr-option">
+                                    <span class="qr-option-label">Color principal</span>
+                                    <span class="qr-option-hint">Define el color del patrón</span>
+                                    <input type="color" name="fill_color" value="#6366f1" data-qr-target="result">
+                                </label>
+                                <label class="qr-option qr-option--wide">
+                                    <span class="qr-option-label">Forma</span>
+                                    <span class="qr-option-hint">Elige el estilo visual</span>
+                                    <select name="dot_style" data-qr-target="result">
+                                        <option value="square">Cuadrado</option>
+                                        <option value="circle">Círculo</option>
+                                        <option value="rounded">Redondeado</option>
+                                        <option value="gapped">Separado</option>
+                                    </select>
+                                </label>
+                            </div>
                         </div>
                         <div class="qr-info">
                             <p id="qr-result-url" class="qr-url"></p>
@@ -156,6 +202,10 @@
         <!-- Footer -->
         <footer class="footer">
             <p>Hecho con ❤️ por daveLinK</p>
+            <div class="cache-status" id="cache-status">
+                <span class="cache-dot" id="cache-dot"></span>
+                <span id="cache-text">Verificando...</span>
+            </div>
         </footer>
     </div>
 

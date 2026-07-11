@@ -21,6 +21,7 @@ slowapi>=0.1.9,<1.0
 # QR code generation
 qrcode>=7.4,<8.0
 pillow>=10.0,<11.0
+redis>=5.0,<6.0
 
 # WSGI → ASGI bridge (for Django admin inside FastAPI)
 a2wsgi>=1.10,<2.0

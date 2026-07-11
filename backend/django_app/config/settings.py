@@ -15,7 +15,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env from project root
 dotenv_path = BASE_DIR.parent.parent / ".env"
-load_dotenv(dotenv_path)
+
+
+def _safe_load_dotenv(path: Path) -> None:
+    """Load dotenv files only when the runtime can read them."""
+    try:
+        if path.exists():
+            load_dotenv(path)
+    except (PermissionError, OSError):
+        # Sandboxed runs may expose the path but deny reads.
+        pass
+
+
+_safe_load_dotenv(dotenv_path)
 
 
 def _db_config_from_url(url: str) -> dict:

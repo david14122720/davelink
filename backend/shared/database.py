@@ -8,7 +8,7 @@ Django uses its own ORM (separate connection pool) pointed at the same DB.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app_config import DATABASE_URL
+from backend.app_config import DATABASE_URL
 
 # ── Engine ─────────────────────────────────────────────────────────────────
 engine = create_engine(
