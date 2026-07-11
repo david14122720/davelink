@@ -71,9 +71,10 @@ async def shorten_url(
     db.commit()
     db.refresh(new_link)
     
-    # Build short URL
-    from backend.app_config import BASE_URL
-    short_url = f"{BASE_URL}/{code}"
+    # Build short URL from request host (works with any domain)
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.hostname
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    short_url = f"{scheme}://{host}/{code}"
     
     return ShortenResponse(
         short_url=short_url,
