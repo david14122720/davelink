@@ -11,7 +11,7 @@ python manage.py collectstatic --noinput --clear
 cd /app
 
 echo "=== daveLinK — Iniciando servidor ==="
-exec gunicorn fastapi_app.main:app \
+exec gunicorn backend.fastapi_app.main:app \
     --worker-class uvicorn.workers.UvicornWorker \
     --bind 0.0.0.0:8000 \
     --workers 4 \
