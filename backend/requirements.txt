@@ -26,5 +26,8 @@ redis>=5.0,<6.0
 # WSGI → ASGI bridge (for Django admin inside FastAPI)
 a2wsgi>=1.10,<2.0
 
+# Test fakes (Slice 1 baseline; used by Slice 2+ for Redis-free tests)
+fakeredis>=2.0,<3.0
+
 # ASGI server
 gunicorn>=23.0,<24.0
