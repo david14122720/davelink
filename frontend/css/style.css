@@ -438,6 +438,137 @@ body {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
+.qr-option input[type="number"] {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    transition: var(--transition);
+}
+
+.qr-option input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Size slider + numeric value side by side */
+.qr-size-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.qr-size-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--primary);
+    cursor: pointer;
+    min-height: 48px;
+}
+
+.qr-size-row input[type="number"] {
+    width: 88px;
+    flex-shrink: 0;
+}
+
+/* Logo preset chips + PNG/SVG format toggle */
+.qr-logo-chips,
+.qr-format-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.qr-chip {
+    position: relative;
+    cursor: pointer;
+}
+
+.qr-chip input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.qr-chip span {
+    display: inline-block;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+    transition: var(--transition);
+    user-select: none;
+}
+
+.qr-chip:hover span {
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+.qr-chip input:checked + span {
+    border-color: var(--primary);
+    background: var(--primary-glow);
+    color: var(--primary);
+}
+
+.qr-chip input:focus-visible + span {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+}
+
+.qr-chip input:disabled + span {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* PNG-only controls fade when SVG mode disables them */
+.qr-option.is-disabled,
+select:disabled {
+    opacity: 0.5;
+}
+
+select:disabled {
+    cursor: not-allowed;
+}
+
+/* Capacity-degraded warning badge */
+.qr-warning {
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 12px;
+}
+
+/* Inline panel error (replaces alert()) */
+.qr-error {
+    margin: 4px 0 0;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--error);
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 12px;
+}
+
+/* Offending picker highlight (e.g. low-contrast colors) */
+.qr-option input.invalid,
+.qr-option select.invalid {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
 /* Stats Section */
 .stats-grid {
     display: grid;

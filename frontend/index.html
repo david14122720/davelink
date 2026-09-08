@@ -68,26 +68,74 @@
                     <div class="qr-container">
                         <img id="qr-image" src="" alt="QR Code">
                     </div>
-                    <div class="qr-customization" aria-label="Personalización del QR">
+                    <div class="qr-customization" aria-label="QR customization" data-qr-panel="section">
                         <div class="qr-customization-head">
-                            <h4>Personaliza tu QR</h4>
-                            <p>Ajusta el color y la forma en tiempo real.</p>
+                            <h4>Customize your QR</h4>
+                            <p>Live preview — changes apply instantly.</p>
                         </div>
+                        <p class="qr-warning" data-qr-warning hidden></p>
                         <div class="qr-customization-grid">
                             <label class="qr-option">
-                                <span class="qr-option-label">Color principal</span>
-                                <span class="qr-option-hint">Define el color del patrón</span>
-                                <input type="color" name="fill_color" value="#6366f1" data-qr-target="section">
+                                <span class="qr-option-label">Main color</span>
+                                <span class="qr-option-hint">Color of the QR pattern</span>
+                                <input type="color" name="fill_color" value="#6366f1" data-qr-panel="section">
                             </label>
-                            <label class="qr-option qr-option--wide">
-                                <span class="qr-option-label">Forma</span>
-                                <span class="qr-option-hint">Elige el estilo visual</span>
-                                <select name="dot_style" data-qr-target="section">
-                                    <option value="square">Cuadrado</option>
-                                    <option value="circle">Círculo</option>
-                                    <option value="rounded">Redondeado</option>
-                                    <option value="gapped">Separado</option>
+                            <label class="qr-option">
+                                <span class="qr-option-label">Background</span>
+                                <span class="qr-option-hint">QR background color</span>
+                                <input type="color" name="back_color" value="#ffffff" data-qr-panel="section">
+                            </label>
+                            <div class="qr-option">
+                                <span class="qr-option-label">Size</span>
+                                <span class="qr-option-hint">Output in pixels (64–2048)</span>
+                                <span class="qr-size-row">
+                                    <input type="range" name="size" min="64" max="2048" step="32" value="400" data-qr-panel="section" aria-label="QR size">
+                                    <input type="number" name="size_value" min="64" max="2048" step="1" value="400" data-qr-panel="section" data-size-number aria-label="QR size value">
+                                </span>
+                            </div>
+                            <div class="qr-option">
+                                <span class="qr-option-label">Format</span>
+                                <span class="qr-option-hint">PNG supports styles; SVG is square-only</span>
+                                <span class="qr-format-toggle" data-qr-format>
+                                    <label class="qr-chip"><input type="radio" name="format" value="png" checked data-qr-panel="section"><span>PNG</span></label>
+                                    <label class="qr-chip"><input type="radio" name="format" value="svg" data-qr-panel="section"><span>SVG</span></label>
+                                </span>
+                            </div>
+                            <label class="qr-option">
+                                <span class="qr-option-label">Shape</span>
+                                <span class="qr-option-hint">Visual module style (PNG only)</span>
+                                <select name="dot_style" data-qr-panel="section" data-png-only title="PNG only — disabled in SVG mode">
+                                    <option value="square">Square</option>
+                                    <option value="circle">Circle</option>
+                                    <option value="rounded">Rounded</option>
+                                    <option value="gapped">Gapped</option>
                                 </select>
+                            </label>
+                            <label class="qr-option">
+                                <span class="qr-option-label">Error correction</span>
+                                <span class="qr-option-hint">Higher levels survive logos and damage</span>
+                                <select name="error_correction" data-qr-panel="section">
+                                    <option value="L">L — Low (7%)</option>
+                                    <option value="M">M — Medium (15%)</option>
+                                    <option value="Q">Q — Quartile (25%)</option>
+                                    <option value="H" selected>H — High (30%)</option>
+                                </select>
+                            </label>
+                            <div class="qr-option qr-option--wide" data-png-only-wrap title="PNG only — disabled in SVG mode">
+                                <span class="qr-option-label">Logo</span>
+                                <span class="qr-option-hint">Built-in preset, centered (PNG only)</span>
+                                <span class="qr-logo-chips">
+                                    <label class="qr-chip"><input type="radio" name="logo" value="" checked data-qr-panel="section" data-png-only><span>None</span></label>
+                                    <label class="qr-chip"><input type="radio" name="logo" value="davelink" data-qr-panel="section" data-png-only><span>⬢ davelink</span></label>
+                                    <label class="qr-chip"><input type="radio" name="logo" value="link" data-qr-panel="section" data-png-only><span>🔗 link</span></label>
+                                    <label class="qr-chip"><input type="radio" name="logo" value="star" data-qr-panel="section" data-png-only><span>⭐ star</span></label>
+                                    <label class="qr-chip"><input type="radio" name="logo" value="heart" data-qr-panel="section" data-png-only><span>❤ heart</span></label>
+                                </span>
+                            </div>
+                            <label class="qr-option">
+                                <span class="qr-option-label">Quiet zone</span>
+                                <span class="qr-option-hint">Border in modules (0–16)</span>
+                                <input type="number" name="border" min="0" max="16" step="1" value="4" data-qr-panel="section">
                             </label>
                         </div>
                     </div>
@@ -95,8 +143,11 @@
                         <p id="qr-original-url" class="qr-url"></p>
                     </div>
                     <div class="result-actions">
-                        <button id="download-qr" class="action-btn">
-                            💾 Descargar QR
+                        <button id="download-qr-png" class="action-btn">
+                            💾 Download PNG
+                        </button>
+                        <button id="download-qr-svg" class="action-btn">
+                            💾 Download SVG
                         </button>
                         <button id="share-qr" class="action-btn">
                             📤 Compartir
@@ -134,26 +185,74 @@
                         <div class="qr-container">
                             <img id="qr-result-image" src="" alt="QR Code">
                         </div>
-                        <div class="qr-customization" aria-label="Personalización del QR">
+                        <div class="qr-customization" aria-label="QR customization" data-qr-panel="result">
                             <div class="qr-customization-head">
-                                <h4>Personaliza tu QR</h4>
-                                <p>Ajusta el color y la forma en tiempo real.</p>
+                                <h4>Customize your QR</h4>
+                                <p>Live preview — changes apply instantly.</p>
                             </div>
+                            <p class="qr-warning" data-qr-warning hidden></p>
                             <div class="qr-customization-grid">
                                 <label class="qr-option">
-                                    <span class="qr-option-label">Color principal</span>
-                                    <span class="qr-option-hint">Define el color del patrón</span>
-                                    <input type="color" name="fill_color" value="#6366f1" data-qr-target="result">
+                                    <span class="qr-option-label">Main color</span>
+                                    <span class="qr-option-hint">Color of the QR pattern</span>
+                                    <input type="color" name="fill_color" value="#6366f1" data-qr-panel="result">
                                 </label>
-                                <label class="qr-option qr-option--wide">
-                                    <span class="qr-option-label">Forma</span>
-                                    <span class="qr-option-hint">Elige el estilo visual</span>
-                                    <select name="dot_style" data-qr-target="result">
-                                        <option value="square">Cuadrado</option>
-                                        <option value="circle">Círculo</option>
-                                        <option value="rounded">Redondeado</option>
-                                        <option value="gapped">Separado</option>
+                                <label class="qr-option">
+                                    <span class="qr-option-label">Background</span>
+                                    <span class="qr-option-hint">QR background color</span>
+                                    <input type="color" name="back_color" value="#ffffff" data-qr-panel="result">
+                                </label>
+                                <div class="qr-option">
+                                    <span class="qr-option-label">Size</span>
+                                    <span class="qr-option-hint">Output in pixels (64–2048)</span>
+                                    <span class="qr-size-row">
+                                        <input type="range" name="size" min="64" max="2048" step="32" value="400" data-qr-panel="result" aria-label="QR size">
+                                        <input type="number" name="size_value" min="64" max="2048" step="1" value="400" data-qr-panel="result" data-size-number aria-label="QR size value">
+                                    </span>
+                                </div>
+                                <div class="qr-option">
+                                    <span class="qr-option-label">Format</span>
+                                    <span class="qr-option-hint">PNG supports styles; SVG is square-only</span>
+                                    <span class="qr-format-toggle" data-qr-format>
+                                        <label class="qr-chip"><input type="radio" name="format" value="png" checked data-qr-panel="result"><span>PNG</span></label>
+                                        <label class="qr-chip"><input type="radio" name="format" value="svg" data-qr-panel="result"><span>SVG</span></label>
+                                    </span>
+                                </div>
+                                <label class="qr-option">
+                                    <span class="qr-option-label">Shape</span>
+                                    <span class="qr-option-hint">Visual module style (PNG only)</span>
+                                    <select name="dot_style" data-qr-panel="result" data-png-only title="PNG only — disabled in SVG mode">
+                                        <option value="square">Square</option>
+                                        <option value="circle">Circle</option>
+                                        <option value="rounded">Rounded</option>
+                                        <option value="gapped">Gapped</option>
                                     </select>
+                                </label>
+                                <label class="qr-option">
+                                    <span class="qr-option-label">Error correction</span>
+                                    <span class="qr-option-hint">Higher levels survive logos and damage</span>
+                                    <select name="error_correction" data-qr-panel="result">
+                                        <option value="L">L — Low (7%)</option>
+                                        <option value="M">M — Medium (15%)</option>
+                                        <option value="Q">Q — Quartile (25%)</option>
+                                        <option value="H" selected>H — High (30%)</option>
+                                    </select>
+                                </label>
+                                <div class="qr-option qr-option--wide" data-png-only-wrap title="PNG only — disabled in SVG mode">
+                                    <span class="qr-option-label">Logo</span>
+                                    <span class="qr-option-hint">Built-in preset, centered (PNG only)</span>
+                                    <span class="qr-logo-chips">
+                                        <label class="qr-chip"><input type="radio" name="logo" value="" checked data-qr-panel="result" data-png-only><span>None</span></label>
+                                        <label class="qr-chip"><input type="radio" name="logo" value="davelink" data-qr-panel="result" data-png-only><span>⬢ davelink</span></label>
+                                        <label class="qr-chip"><input type="radio" name="logo" value="link" data-qr-panel="result" data-png-only><span>🔗 link</span></label>
+                                        <label class="qr-chip"><input type="radio" name="logo" value="star" data-qr-panel="result" data-png-only><span>⭐ star</span></label>
+                                        <label class="qr-chip"><input type="radio" name="logo" value="heart" data-qr-panel="result" data-png-only><span>❤ heart</span></label>
+                                    </span>
+                                </div>
+                                <label class="qr-option">
+                                    <span class="qr-option-label">Quiet zone</span>
+                                    <span class="qr-option-hint">Border in modules (0–16)</span>
+                                    <input type="number" name="border" min="0" max="16" step="1" value="4" data-qr-panel="result">
                                 </label>
                             </div>
                         </div>
@@ -161,8 +260,11 @@
                             <p id="qr-result-url" class="qr-url"></p>
                         </div>
                         <div class="result-actions">
-                            <button id="download-qr-result" class="action-btn">
-                                💾 Descargar QR
+                            <button id="download-qr-result-png" class="action-btn">
+                                💾 Download PNG
+                            </button>
+                            <button id="download-qr-result-svg" class="action-btn">
+                                💾 Download SVG
                             </button>
                             <button id="copy-qr-result" class="action-btn">
                                 📋 Copiar enlace
