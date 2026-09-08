@@ -51,10 +51,22 @@ class LinkAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected links as active")
     def mark_active(self, request, queryset):
-        updated = queryset.update(activo=True)
+        # Per-object save (NOT queryset.update()): update() bypasses
+        # post_save signals, which would leave stale redirect/stats/QR
+        # cache entries behind. See links/signals.py (design risk #5).
+        updated = 0
+        for link in queryset:
+            link.activo = True
+            link.save(update_fields=["activo"])
+            updated += 1
         self.message_user(request, f"{updated} link(s) marked as active.", messages.SUCCESS)
 
     @admin.action(description="Mark selected links as inactive")
     def mark_inactive(self, request, queryset):
-        updated = queryset.update(activo=False)
+        # Per-object save — same signal reason as mark_active above.
+        updated = 0
+        for link in queryset:
+            link.activo = False
+            link.save(update_fields=["activo"])
+            updated += 1
         self.message_user(request, f"{updated} link(s) marked as inactive.", messages.WARNING)
