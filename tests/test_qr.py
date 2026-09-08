@@ -57,7 +57,11 @@ def test_generate_custom_qr_all_styles(client, db_session, dot_style):
 
 
 def test_generate_custom_qr_applies_colors(client, db_session):
-    """Verify custom foreground and background colors are rendered in the PNG."""
+    """Verify custom foreground and background colors are rendered in the PNG.
+
+    Slice 4: palette must pass the 3:1 contrast floor (red-on-green at
+    2.91:1 is now correctly rejected with 422), so this uses red-on-white.
+    """
     code = "colorcheck"
     link = Link(codigo=code, url_original="https://example.com/color")
     db_session.add(link)
@@ -67,7 +71,7 @@ def test_generate_custom_qr_applies_colors(client, db_session):
         "code": code,
         "config": {
             "fill_color": "#ff0000",
-            "back_color": "#00ff00",
+            "back_color": "#ffffff",
             "dot_style": "square",
         },
     }
@@ -78,7 +82,7 @@ def test_generate_custom_qr_applies_colors(client, db_session):
     data = response.json()
     image = Image.open(BytesIO(base64.b64decode(data["qr_code"]))).convert("RGB")
 
-    assert image.getpixel((0, 0)) == (0, 255, 0)
+    assert image.getpixel((0, 0)) == (255, 255, 255)
     assert any(
         r > 200 and g < 80 and b < 80
         for r, g, b in image.getdata()
