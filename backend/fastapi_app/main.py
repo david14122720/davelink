@@ -10,6 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from a2wsgi import WSGIMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
@@ -45,6 +46,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class NoPngGzipMiddleware(GZipMiddleware):
+    """GZip everything except pre-compressed PNG payloads.
+
+    Spec (redirect-performance): JSON and SVG responses MUST be
+    gzip-compressed; PNG MUST NOT be double-compressed. Starlette's
+    stock middleware only excludes ``text/event-stream``, so ``.png``
+    binary routes (Slice 4: ``GET /api/qr/{code}.png``) bypass
+    compression entirely here.
+    """
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and (scope.get("path") or "").lower().endswith(".png"):
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
+
+# GZip for JSON/SVG (spec); PNG excluded above (no double-compress).
+app.add_middleware(NoPngGzipMiddleware, minimum_size=500)
+
 # Rate limiting setup
 app.state.limiter = limiter
 
@@ -55,6 +77,7 @@ async def rate_limit_handler(request, exc: RateLimitExceeded):
 
     # Calculate retry-after from limit info stored in request state
     retry_after = 1  # default for "10/second" limit
+    limit_amount = None
     limit_info = getattr(request.state, "view_rate_limit", None)
     if limit_info:
         limit_obj, _ = limit_info
@@ -66,13 +89,25 @@ async def rate_limit_handler(request, exc: RateLimitExceeded):
                 retry_after = int(parts[1].split()[0])
             except (ValueError, IndexError):
                 pass
+        # Surface the quota alongside Retry-After (rate-limiting spec headers)
+        try:
+            item = getattr(limit_obj, "limit", limit_obj)
+            limit_amount = int(getattr(item, "amount", str(item).split()[0]))
+        except (ValueError, TypeError, IndexError, AttributeError):
+            limit_amount = None
+
+    headers = {"Retry-After": str(retry_after)}
+    if limit_amount is not None:
+        headers["X-RateLimit-Limit"] = str(limit_amount)
+        headers["X-RateLimit-Remaining"] = "0"
+        headers["X-RateLimit-Reset"] = str(retry_after)
 
     return JSONResponse(
         status_code=429,
         content={
             "detail": "Límite de solicitudes excedido. Intenta de nuevo.",
         },
-        headers={"Retry-After": str(retry_after)},
+        headers=headers,
     )
 
 
@@ -98,7 +133,7 @@ async def health_check():
 
 
 @app.get("/api/cache/status")
-async def cache_status_endpoint():
+def cache_status_endpoint():
     """Return DragonflyDB connection status."""
     connected, message = cache_status()
     return {"connected": connected, "message": message}

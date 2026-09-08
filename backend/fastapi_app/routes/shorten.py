@@ -3,11 +3,13 @@ LinkSnap / Acortador — Shorten Route
 POST /api/shorten - Create short URL
 """
 
+import hashlib
 import secrets
 import string
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, HttpUrl
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.fastapi_app.rate_limit import limiter
@@ -25,6 +27,29 @@ def generate_code(length: int = 6) -> str:
     return "".join(secrets.choice(BASE62) for _ in range(length))
 
 
+def find_existing_link(db: Session, url: str):
+    """Dedup lookup for an original URL (Slice 3 data layer).
+
+    The md5(url_original) expression index (migration 0003) makes this an
+    index scan on Postgres: compare func.md5(url_original) against the
+    Python-computed digest, plus an equality guard (collision-proof, and
+    Postgres still uses the index for the md5 clause). SQLite has no
+    md5() function at all, so the test/dev dialect uses plain equality —
+    same result, sequential scan, acceptable outside prod.
+    """
+    bind = db.get_bind()
+    dialect = bind.dialect.name if bind is not None else ""
+    if dialect == "sqlite":
+        return db.query(Link).filter(Link.url_original == url).first()
+    url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
+    return (
+        db.query(Link)
+        .filter(func.md5(Link.url_original) == url_md5)
+        .filter(Link.url_original == url)
+        .first()
+    )
+
+
 class ShortenRequest(BaseModel):
     url: HttpUrl
 
@@ -37,20 +62,26 @@ class ShortenResponse(BaseModel):
 
 @router.post("/api/shorten", response_model=ShortenResponse)
 @limiter.limit("10/second")
-async def shorten_url(
+def shorten_url(
     request: Request,
+    response: Response,
     shorten_req: ShortenRequest,
     db: Session = Depends(get_db),
 ):
     """
     Create a short URL from a long URL.
-    
+
     - Generates a unique 6-character code
     - Stores the link in the database
     - Returns the shortened URL
+
+    The `response` param gives slowapi a Response to inject the
+    X-RateLimit-* headers into.
     """
-    # Check if URL already exists
-    existing = db.query(Link).filter(Link.url_original == str(shorten_req.url)).first()
+    # Dedup: does this URL already have a code? (commit 454785c behavior:
+    # return the existing code, never insert a second row for one URL.)
+    url_str = str(shorten_req.url)
+    existing = find_existing_link(db, url_str)
     if existing:
         scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
         host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.hostname

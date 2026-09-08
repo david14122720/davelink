@@ -6,21 +6,23 @@ GET /{code} - Redirect to original URL
 import json
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from backend.fastapi_app.cache import cache_get, cache_set
-from backend.shared.database import get_db
-from backend.shared.models import Link, Analytics
+from backend.fastapi_app.services.analytics import record_analytics
+from backend.shared.database import SessionLocal, get_db
+from backend.shared.models import Link
 
 router = APIRouter()
 
 
 @router.get("/{code}")
-async def redirect_to_url(
+def redirect_to_url(
     code: str,
     request: Request,
+    background: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     start_time = time.perf_counter()
@@ -70,17 +72,19 @@ async def redirect_to_url(
     # Extract headers once
     headers = request.headers
 
-    # Record analytics
+    # Record analytics OFF the critical path: the 302 below is sent before
+    # this task runs. The task opens its own session (get_db is already torn
+    # down by then) and swallows failures — a lost click never becomes a 500.
     # OPTIMIZATION: Removed the synchronous update to Link.clicks (the row lock)
     # We now only perform a single INSERT. Total clicks are calculated on-demand in /stats
-    analytics = Analytics(
-        link_id=link_id,
-        ip_address=(request.client.host if request.client else "") or "",
-        user_agent=headers.get("user-agent") or "",
-        referer=headers.get("referer") or "",
+    background.add_task(
+        record_analytics,
+        link_id,
+        (request.client.host if request.client else "") or "",
+        headers.get("user-agent") or "",
+        headers.get("referer") or "",
+        SessionLocal,
     )
-    db.add(analytics)
-    db.commit()
 
     end_time = time.perf_counter()
     duration = (end_time - start_time) * 1000

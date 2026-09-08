@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -37,13 +37,17 @@ class StatsResponse(BaseModel):
 
 @router.get("/api/stats/{code}", response_model=StatsResponse)
 @limiter.limit("10/second")
-async def get_stats(request: Request, code: str, db: Session = Depends(get_db)):
+def get_stats(request: Request, response: Response, code: str, db: Session = Depends(get_db)):
     """
     Get analytics and statistics for a short URL.
-    
+
     - Returns link details
     - Returns total click count
     - Returns recent click analytics (last 10)
+
+    The `response` param gives slowapi a Response to inject the
+    X-RateLimit-* headers into (endpoints returning a model have no
+    Response of their own for header injection).
     """
     # Try cache first (TTL 30s — short enough for freshness)
     cached = cache_get(f"davelink:stats:{code}")
